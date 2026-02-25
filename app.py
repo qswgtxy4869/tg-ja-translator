@@ -59,7 +59,6 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 async def translate_to_ja(text: str) -> str:
-    # 只输出译文，不要解释
     prompt = (
         "请把下面文本翻译成自然、地道的日语。"
         "保持语气（口语/礼貌程度）尽量一致。"
@@ -68,12 +67,14 @@ async def translate_to_ja(text: str) -> str:
         f"文本：\n{text}"
     )
 
-    # Responses API（Python SDK 1.x）
-    resp = oa.responses.create(
+    resp = oa.chat.completions.create(
         model=OPENAI_MODEL,
-        input=prompt,
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
     )
-    return resp.output_text.strip()
+    return resp.choices[0].message.content.strip()
 
 def format_blockquote(src: str, ja: str) -> str:
     # Telegram/Telethon 对 HTML 支持：<blockquote>...</blockquote>
