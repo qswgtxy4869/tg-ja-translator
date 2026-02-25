@@ -127,7 +127,7 @@ async def flush_chat(chat_id: int):
         # 生产环境建议接入日志系统，这里先简单打印
         print(f"[ERROR] translate/send failed: {e}")
 
-@tg.on(events.NewMessage(incoming=True))
+@tg.on(events.NewMessage())
 async def handler(event: events.NewMessage.Event):
     # 白名单过滤
     if ALLOW_CHAT_IDS is not None and event.chat_id not in ALLOW_CHAT_IDS:
