@@ -36,6 +36,9 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 # 追加翻译块时的隐藏标记：用于防止重复编辑/无限循环
 TRANSLATION_TAG = "\n\n<!--ja-translated-->"
 
+# 超过这个“中文字符数”就不翻译
+MAX_CJK_CHARS = int(os.environ.get("MAX_CJK_CHARS", "300"))
+
 # -----------------------------
 # Clients
 # -----------------------------
@@ -47,6 +50,21 @@ oa = OpenAI(api_key=OPENAI_API_KEY)
 # -----------------------------
 _kana_re = re.compile(r"[\u3040-\u30ff]")  # 平/片假名
 _ws_re = re.compile(r"\s+")
+
+# 纯 URL 判定（允许前后空白）
+_url_only_re = re.compile(
+    r"^\s*(https?://[^\s]+|www\.[^\s]+)\s*$",
+    re.IGNORECASE
+)
+
+# 统计中日韩统一表意文字数量（中文汉字也算在这里）
+_cjk_re = re.compile(r"[\u4e00-\u9fff]")
+
+def is_url_only(text: str) -> bool:
+    return bool(_url_only_re.fullmatch((text or "").strip()))
+
+def count_cjk_chars(text: str) -> int:
+    return len(_cjk_re.findall(text or ""))
 
 def normalize_text(text: str) -> str:
     return _ws_re.sub(" ", (text or "").strip())
@@ -122,6 +140,14 @@ async def on_my_message(event: events.NewMessage.Event):
 
     # 空文本/太短通常没必要
     if not text or len(text) < 2:
+        return
+    
+    # 如果是纯 URL，则不翻译
+    if is_url_only(text):
+        return
+
+    # 如果中文/汉字字符数超过 300，则不翻译
+    if count_cjk_chars(text) > MAX_CJK_CHARS:
         return
 
     # 已经像日语就不翻
